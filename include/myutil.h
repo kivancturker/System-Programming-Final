@@ -19,6 +19,7 @@ typedef struct {
     int height;
 } ClientArguments;
 
+void errExit(const char* errMessage);
 int parseServerArguments(int argc, char *argv[], ServerArguments *args);
 int validateServerArguments(const ServerArguments *args);
 int parseClientArguments(int argc, char *argv[], ClientArguments *args);

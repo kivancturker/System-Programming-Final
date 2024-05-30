@@ -4,7 +4,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "myutil.h"
+
+void errExit(const char* errMessage) {
+    perror(errMessage);
+    exit(EXIT_FAILURE);
+}
 
 int parseServerArguments(int argc, char *argv[], ServerArguments *args) {
     if (argc != 5) {
