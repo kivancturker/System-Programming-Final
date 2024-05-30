@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler Flags
-CFLAGS = -I -Wall -pthread -std=gnu99
+CFLAGS = -I$(INCLUDE_DIR) -Wall -pthread -std=gnu99
 
 # Directories
 SRC_DIR = src

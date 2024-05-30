@@ -4,7 +4,14 @@
 
 #include <stdio.h>
 
-int main() {
-    printf("Hello, World!\n");
+#include "myutil.h"
+
+int main(int argc, char *argv[]) {
+
+    ClientArguments args;
+    if (!parseClientArguments(argc, argv, &args)) {
+        return 1;
+    }
+
     return 0;
 }
