@@ -12,7 +12,7 @@ void errExit(const char* errMessage) {
     exit(EXIT_FAILURE);
 }
 
-int parseServerArguments(int argc, char *argv[], ServerArguments *args) {
+int parseServerArguments(int argc, char *argv[], struct ServerArguments *args) {
     if (argc != 5) {
         fprintf(stderr, "Usage: %s <portnumber> <CookthreadPoolSize> <DeliveryPoolSize> <deliverySpeed>\n", argv[0]);
         return 0;
@@ -26,7 +26,7 @@ int parseServerArguments(int argc, char *argv[], ServerArguments *args) {
     return validateServerArguments(args);
 }
 
-int validateServerArguments(const ServerArguments *args) {
+int validateServerArguments(const struct ServerArguments *args) {
     if (args->portnumber <= 0) {
         fprintf(stderr, "Error: portnumber must be a positive integer.\n");
         return 0;
@@ -46,7 +46,7 @@ int validateServerArguments(const ServerArguments *args) {
     return 1;
 }
 
-int parseClientArguments(int argc, char *argv[], ClientArguments *args) {
+int parseClientArguments(int argc, char *argv[], struct ClientArguments *args) {
     if (argc != 5) {
         fprintf(stderr, "Usage: %s <portnumber> <numberOfClients> <townWidth> <townHeight>\n", argv[0]);
         return 0;
@@ -60,7 +60,7 @@ int parseClientArguments(int argc, char *argv[], ClientArguments *args) {
     return validateClientArguments(args);
 }
 
-int validateClientArguments(const ClientArguments *args) {
+int validateClientArguments(const struct ClientArguments *args) {
     if (args->portnumber <= 0) {
         fprintf(stderr, "Error: portnumber must be a positive integer.\n");
         return 0;

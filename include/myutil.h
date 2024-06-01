@@ -5,36 +5,62 @@
 #ifndef MYUTIL_H
 #define MYUTIL_H
 
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
+
 #define NO_EINTR(expr) while ((expr) == -1 && errno == EINTR);
 #define READ_END_PIPE 0
 #define WRITE_END_PIPE 1
 
-typedef struct {
+enum TerminationCondition {
+    SERVER_SHUTDOWN,
+    CLIENT_CANCEL,
+    NO_TERMINATION
+};
+
+struct ServerArguments {
     int portnumber;
     int cookThreadPoolSize;
     int deliveryThreadPoolSize;
     int deliverySpeed;
-} ServerArguments;
+};
 
-typedef struct {
+struct ClientArguments {
     int portnumber;
     int numberOfClients;
     int width;
     int height;
-} ClientArguments;
+};
 
-typedef struct {
+struct ManagerArguments {
     int cookThreadPoolSize;
     int deliveryThreadPoolSize;
     int deliverySpeed;
     int socketFd;
     int orderPipe[2];
-} ManagerArguments;
+    enum TerminationCondition *terminationCondition;
+    pthread_cond_t *managerWorkCond;
+    pthread_mutex_t *managerWorkMutex;
+};
+
+struct Order {
+    int numberOfClients;
+    int width;
+    int height;
+    int clientSocketFd;
+};
+
+struct OrderRequest {
+    int numberOfClients;
+    int width;
+    int height;
+};
 
 void errExit(const char* errMessage);
-int parseServerArguments(int argc, char *argv[], ServerArguments *args);
-int validateServerArguments(const ServerArguments *args);
-int parseClientArguments(int argc, char *argv[], ClientArguments *args);
-int validateClientArguments(const ClientArguments *args);
+int parseServerArguments(int argc, char *argv[], struct ServerArguments *args);
+int validateServerArguments(const struct ServerArguments *args);
+int parseClientArguments(int argc, char *argv[], struct ClientArguments *args);
+int validateClientArguments(const struct ClientArguments *args);
 
 #endif //MYUTIL_H

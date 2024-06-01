@@ -22,7 +22,7 @@ void sigintHandler(int signal) {
 
 int main(int argc, char *argv[]) {
 
-    ServerArguments args;
+    struct ServerArguments args;
     if (!parseServerArguments(argc, argv, &args)) {
         return 1;
     }
@@ -39,18 +39,24 @@ int main(int argc, char *argv[]) {
     if (pipe(orderPipe) == -1) {
         errExit("pipe");
     }
+    enum TerminationCondition terminationCondition = NO_TERMINATION;
+    pthread_cond_t managerWorkCond = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_t managerWorkMutex = PTHREAD_MUTEX_INITIALIZER;
 
     int socketFd = establishConnection(args.portnumber);
     if (socketFd < 0) {
         errExit("establishConnection");
     }
 
-    ManagerArguments managerArgs = {
+    struct ManagerArguments managerArgs = {
         .cookThreadPoolSize = args.cookThreadPoolSize,
         .deliveryThreadPoolSize = args.deliveryThreadPoolSize,
         .deliverySpeed = args.deliverySpeed,
         .socketFd = socketFd,
-        .orderPipe = {orderPipe[0], orderPipe[1]}
+        .orderPipe = {orderPipe[0], orderPipe[1]},
+        .terminationCondition = &terminationCondition,
+        .managerWorkCond = &managerWorkCond,
+        .managerWorkMutex = &managerWorkMutex
     };
     // Create Manager Thread
     pthread_t managerThread;
@@ -58,7 +64,11 @@ int main(int argc, char *argv[]) {
         errExit("pthread_create");
     }
 
-    int clientFd;
+    int clientFd = 0;
+    struct OrderRequest orderRequest;
+    struct Order order;
+    int readBytes = 0;
+    int writtenBytes = 0;
     while(sigIntCount == 0) {
         // accept connection 
         clientFd = accept(socketFd, NULL, NULL);
@@ -70,11 +80,33 @@ int main(int argc, char *argv[]) {
         }
         // Log connection
         printf("New client connected\n");
+        // Read the message from client
+        NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));
+        if (readBytes == -1) {
+            errExit("read");
+        }
+        order = (struct Order) {
+            .numberOfClients = orderRequest.numberOfClients,
+            .width = orderRequest.width,
+            .height = orderRequest.height,
+            .clientSocketFd = clientFd
+        };
         // Send the connection to manager through pipe
-        close(clientFd);
+        NO_EINTR(writtenBytes = write(orderPipe[WRITE_END_PIPE], &order, sizeof(struct Order)));
+        if (writtenBytes == -1) {
+            errExit("write");
+        }
+
+        pthread_mutex_lock(&managerWorkMutex);
+        pthread_cond_signal(&managerWorkCond);
+        pthread_mutex_unlock(&managerWorkMutex);
     }
     if (sigIntCount != 0) {
             printf("Server is shutting down\n");
+            pthread_mutex_lock(&managerWorkMutex);
+            terminationCondition = SERVER_SHUTDOWN;
+            pthread_cond_signal(&managerWorkCond);
+            pthread_mutex_unlock(&managerWorkMutex);
     
     }
 
