@@ -14,8 +14,9 @@ SERVER_EXE = PideShop
 CLIENT_EXE = HungryVeryMuch
 
 # Source files
-SERVER_SRC = $(SRC_DIR)/server.c $(SRC_DIR)/myutil.c
-CLIENT_SRC = $(SRC_DIR)/client.c $(SRC_DIR)/myutil.c
+SERVER_SRC = $(SRC_DIR)/server.c $(SHARED_SRC) $(SRC_DIR)/manager.c
+CLIENT_SRC = $(SRC_DIR)/client.c $(SHARED_SRC)
+SHARED_SRC = $(SRC_DIR)/myutil.c $(SRC_DIR)/sockconn.c
 
 # Object files
 SERVER_OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SERVER_SRC))

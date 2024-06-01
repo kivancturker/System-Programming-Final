@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "myutil.h"
+#include "sockconn.h"
 
 sig_atomic_t sigIntrCount = 0;
 
@@ -27,6 +29,12 @@ int main(int argc, char *argv[]) {
     if (sigaction(SIGINT, &sa, NULL) == -1) {
         errExit("sigaction");
     }
+
+    char *defaultHostname = "localhost";
+
+    int socketFd = connectToServer(defaultHostname, args.portnumber);
+
+    close(socketFd);
 
     return 0;
 }
