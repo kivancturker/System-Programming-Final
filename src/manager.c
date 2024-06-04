@@ -3,9 +3,11 @@
 #include "logger.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
+#include <time.h>
 
 void* manager(void* arg) {
     struct ManagerArguments* args = (struct ManagerArguments*) arg;
@@ -17,6 +19,9 @@ void* manager(void* arg) {
     enum TerminationCondition* terminationCondition = args->terminationCondition;
     pthread_cond_t* managerWorkCond = args->managerWorkCond;
     pthread_mutex_t* managerWorkMutex = args->managerWorkMutex;
+
+    // Seed the random variable once
+    srand(time(NULL));
 
     // In a loop read from the pipe and print the result after that close the client socket
     struct Order order;
@@ -34,7 +39,11 @@ void* manager(void* arg) {
             errExit("read");
         }
         logAndPrintMessage("Order received from client: %d %d %d %d\n", order.numberOfClients, order.width, order.height, order.clientSocketFd);
+        struct Coord* coords = generateRandomCoord(order.width, order.height, order.numberOfClients);
+        // Later use the coordinates for delivery person
+        
         close(order.clientSocketFd);
+        free(coords);
         pthread_mutex_unlock(managerWorkMutex);
     }
 

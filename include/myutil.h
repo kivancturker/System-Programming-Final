@@ -57,10 +57,16 @@ struct OrderRequest {
     int height;
 };
 
+struct Coord {
+    int x;
+    int y;
+};
+
 void errExit(const char* errMessage);
 int parseServerArguments(int argc, char *argv[], struct ServerArguments *args);
 int validateServerArguments(const struct ServerArguments *args);
 int parseClientArguments(int argc, char *argv[], struct ClientArguments *args);
 int validateClientArguments(const struct ClientArguments *args);
+struct Coord* generateRandomCoord(int width, int height, int numberOfCoords);
 
 #endif //MYUTIL_H

@@ -79,3 +79,17 @@ int validateClientArguments(const struct ClientArguments *args) {
     }
     return 1;
 }
+
+struct Coord* generateRandomCoord(int width, int height, int numberOfCoords) {
+    struct Coord* coords = (struct Coord*) malloc(numberOfCoords * sizeof(struct Coord));
+    if (coords == NULL) {
+        return NULL;
+    }
+
+    for (int i = 0; i < numberOfCoords; i++) {
+        coords[i].x = rand() % width;
+        coords[i].y = rand() % height;
+    }
+
+    return coords;
+}
