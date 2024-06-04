@@ -68,5 +68,6 @@ int validateServerArguments(const struct ServerArguments *args);
 int parseClientArguments(int argc, char *argv[], struct ClientArguments *args);
 int validateClientArguments(const struct ClientArguments *args);
 struct Coord* generateRandomCoord(int width, int height, int numberOfCoords);
+int calculateDistanceFromShop(struct Coord coord, int width, int height);
 
 #endif //MYUTIL_H

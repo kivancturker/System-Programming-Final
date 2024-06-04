@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "myutil.h"
 
@@ -92,4 +93,11 @@ struct Coord* generateRandomCoord(int width, int height, int numberOfCoords) {
     }
 
     return coords;
+}
+
+int calculateDistanceFromShop(struct Coord coord, int width, int height) {
+    int shopX = width / 2;
+    int shopY = height / 2;
+
+    return (int) sqrt(pow(coord.x - shopX, 2) + pow(coord.y - shopY, 2));
 }
