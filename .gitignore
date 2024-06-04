@@ -3,4 +3,5 @@ obj/*.o
 HungryVeryMuch
 PideShop
 *.pdf
+*.txt
 .vscode

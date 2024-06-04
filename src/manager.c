@@ -1,5 +1,6 @@
 #include "manager.h"
 #include "myutil.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -32,7 +33,7 @@ void* manager(void* arg) {
         if (readBytes == -1) {
             errExit("read");
         }
-        printf("Order received from client: %d %d %d %d\n", order.numberOfClients, order.width, order.height, order.clientSocketFd);
+        logAndPrintMessage("Order received from client: %d %d %d %d\n", order.numberOfClients, order.width, order.height, order.clientSocketFd);
         close(order.clientSocketFd);
         pthread_mutex_unlock(managerWorkMutex);
     }

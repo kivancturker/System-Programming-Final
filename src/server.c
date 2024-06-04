@@ -13,6 +13,7 @@
 #include "myutil.h"
 #include "sockconn.h"
 #include "manager.h"
+#include "logger.h"
 
 sig_atomic_t sigIntCount = 0;
 
@@ -24,6 +25,10 @@ int main(int argc, char *argv[]) {
 
     struct ServerArguments args;
     if (!parseServerArguments(argc, argv, &args)) {
+        return 1;
+    }
+
+    if (createLogFile(LOG_FILE_NAME) != 0) {
         return 1;
     }
 
@@ -69,6 +74,7 @@ int main(int argc, char *argv[]) {
     struct Order order;
     int readBytes = 0;
     int writtenBytes = 0;
+    int connectedClientCount = 0;
     while(sigIntCount == 0) {
         // accept connection 
         clientFd = accept(socketFd, NULL, NULL);
@@ -79,7 +85,8 @@ int main(int argc, char *argv[]) {
             errExit("accept");
         }
         // Log connection
-        printf("New client connected\n");
+        connectedClientCount++;
+        logAndPrintMessage("Client%d Connected\n", connectedClientCount);
         // Read the message from client
         NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));
         if (readBytes == -1) {
@@ -116,6 +123,7 @@ int main(int argc, char *argv[]) {
     }
 
     close(socketFd);
+    closeLogFile();
 
     return 0;
 }
