@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+#include <pthread.h>
 
 #include "myutil.h"
 
@@ -100,4 +102,78 @@ int calculateDistanceFromShop(struct Coord coord, int width, int height) {
     int shopY = height / 2;
 
     return (int) sqrt(pow(coord.x - shopX, 2) + pow(coord.y - shopY, 2));
+}
+
+struct Matrix* generateMatrix(int amount) {
+    struct Matrix* matrices = (struct Matrix*) malloc(amount * sizeof(struct Matrix));
+    if (matrices == NULL) {
+        return NULL; 
+    }
+
+    // Fill each matrix with a random number between 500 and 2000
+    for (int i = 0; i < amount; i++) {
+        matrices[i].number = rand() % 150001 + 250000; // rand() % 1501 gives a range of 0 to 1500
+    }
+
+    return matrices;
+}
+
+long calculatePseudoInverseMatrix(struct Matrix* matrix) {
+    clock_t start = clock();
+
+    int number = matrix->number;
+    int closestPrime = 2; // Start with the first prime number
+
+    for (int i = 2; i <= number; i++) {
+        if (isPrime(i)) {
+            closestPrime = i;
+        }
+    }
+
+    clock_t end = clock();
+
+    double durationInSeconds = (double)(end - start) / CLOCKS_PER_SEC;
+    long nanoseconds = (long)(durationInSeconds * 1000000000L);
+
+    return nanoseconds;
+}
+
+int isPrime(int num) {
+    if (num <= 1) return 0; // 0 and 1 are not prime numbers
+    if (num <= 3) return 1; // 2 and 3 are prime numbers
+
+    if (num % 2 == 0 || num % 3 == 0) return 0; // Eliminate multiples of 2 and 3
+
+    for (int i = 5; i * i <= num; i += 6) {
+        if (num % i == 0 || num % (i + 2) == 0)
+            return 0;
+    }
+    return 1;
+}
+
+void createThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), void* arg) {
+    for (int i = 0; i < threadPoolSize; i++) {
+        if (pthread_create(&threads[i], NULL, threadFunction, arg) != 0) {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void joinThreadPool(pthread_t* threads, int threadPoolSize) {
+    for (int i = 0; i < threadPoolSize; i++) {
+        if (pthread_join(threads[i], NULL) != 0) {
+            perror("pthread_join");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void cancelThreadPool(pthread_t* threads, int threadPoolSize) {
+    for (int i = 0; i < threadPoolSize; i++) {
+        if (pthread_cancel(threads[i]) != 0) {
+            perror("pthread_cancel");
+            exit(EXIT_FAILURE);
+        }
+    }
 }

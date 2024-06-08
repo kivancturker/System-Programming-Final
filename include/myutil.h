@@ -44,6 +44,16 @@ struct ManagerArguments {
     pthread_mutex_t *managerWorkMutex;
 };
 
+struct CookArguments {
+    int mealOrderPipe[2];
+    int mealCompletePipe[2];
+    pthread_mutex_t *managerWorkMutex;
+    pthread_cond_t *managerWorkCond;
+    pthread_cond_t *cookWorkCond;
+    pthread_mutex_t *mealOrderPipeMutex;
+    pthread_mutex_t *mealCompletePipeMutex;
+};
+
 struct Order {
     int numberOfClients;
     int width;
@@ -62,6 +72,17 @@ struct Coord {
     int y;
 };
 
+struct Matrix {
+    int number;
+};
+
+struct Meal {
+    struct Matrix matrix;
+    struct Coord coord;
+    long timeTaken;
+    pthread_t cookDealWith;
+};
+
 void errExit(const char* errMessage);
 int parseServerArguments(int argc, char *argv[], struct ServerArguments *args);
 int validateServerArguments(const struct ServerArguments *args);
@@ -69,5 +90,12 @@ int parseClientArguments(int argc, char *argv[], struct ClientArguments *args);
 int validateClientArguments(const struct ClientArguments *args);
 struct Coord* generateRandomCoord(int width, int height, int numberOfCoords);
 int calculateDistanceFromShop(struct Coord coord, int width, int height);
+struct Matrix* generateMatrix(int amount); // Create the matrix and use it throughout the program
+long calculatePseudoInverseMatrix(struct Matrix* matrix);
+int isPrime(int num);
+void createThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), void* arg);
+void joinThreadPool(pthread_t* threads, int threadPoolSize);
+void cancelThreadPool(pthread_t* threads, int threadPoolSize);
+
 
 #endif //MYUTIL_H
