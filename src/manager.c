@@ -2,6 +2,7 @@
 #include "myutil.h"
 #include "logger.h"
 #include "cook.h"
+#include "delivery.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,7 @@ void* manager(void* arg) {
     int cookThreadPoolSize = args->cookThreadPoolSize;
     int deliveryThreadPoolSize = args->deliveryThreadPoolSize;
     int deliverySpeed = args->deliverySpeed;
-    int socketFd = args->socketFd;
+    // int socketFd = args->socketFd;
     int orderPipe[2] = {args->orderPipe[0], args->orderPipe[1]};
     enum TerminationCondition* terminationCondition = args->terminationCondition;
     pthread_cond_t* managerWorkCond = args->managerWorkCond;
@@ -31,6 +32,11 @@ void* manager(void* arg) {
 
     int mealCompletePipe[2];
     if (pipe(mealCompletePipe) == -1) {
+        errExit("pipe");
+    }
+
+    int mealToDeliverPipe[2];
+    if (pipe(mealToDeliverPipe) == -1) {
         errExit("pipe");
     }
 
@@ -51,11 +57,21 @@ void* manager(void* arg) {
     pthread_t cookThreads[cookThreadPoolSize];
     createThreadPool(cookThreads, cookThreadPoolSize, cook, &cookArgs);
 
+    struct DeliveryPersonArguments deliveryPersonArgs = {
+        .deliverySpeed = deliverySpeed,
+        .mealToDeliverPipe = {mealToDeliverPipe[0], mealToDeliverPipe[1]}
+    };
+    pthread_t deliveryPersonThreads[deliveryThreadPoolSize];
+    createThreadPool(deliveryPersonThreads, deliveryThreadPoolSize, deliveryPerson, &deliveryPersonArgs);
+
     // In a loop read from the pipe and print the result after that close the client socket
     struct Order order;
     int readBytes = 0;
     int writeBytes = 0;
     int completedMeals = 0;
+    int expectedMeals = 0;
+    int currentMealCountForDelivery = 0;
+    struct MealToDeliver* mealsToDeliver;
     while (1) {
         pthread_mutex_lock(managerWorkMutex);
         // Avoid spurious wakeups
@@ -76,7 +92,10 @@ void* manager(void* arg) {
             meals[i].matrix = matrices[i];
             meals[i].coord = coords[i];
         }
+        expectedMeals = order.numberOfClients;
 
+        mealsToDeliver = (struct MealToDeliver*) malloc(sizeof(struct MealToDeliver));
+        mealsToDeliver->mealCount = 0;
         // Later use the coordinates for delivery person
         for (int i = 0; i < order.numberOfClients; i++) {
             NO_EINTR(writeBytes = write(mealOrderPipe[WRITE_END_PIPE], &meals[i], sizeof(struct Meal)));
@@ -90,8 +109,29 @@ void* manager(void* arg) {
             if (readBytes == -1) {
                 errExit("read");
             }
-            printf("Time takken for meal %d: %ld and meal is %d\n", i, meals[i].timeTaken, meals[i].matrix.number);
+            completedMeals++;
+            currentMealCountForDelivery++;
+            // printf("Time takken for meal %d: %ld and meal is %d\n", i, meals[i].timeTaken, meals[i].matrix.number);
+
+            // Send meals to the available delivery person
+            // Either 3 meals or remaining meals then delivery person goes.
+            mealsToDeliver->meal[mealsToDeliver->mealCount] = meals[i];
+            mealsToDeliver->mealCount++;
+            mealsToDeliver->width = order.width;
+            mealsToDeliver->height = order.height;
+            if (currentMealCountForDelivery == 3 || completedMeals == expectedMeals) {
+                writeBytes = write(mealToDeliverPipe[WRITE_END_PIPE], mealsToDeliver, sizeof(struct MealToDeliver));
+                if (writeBytes == -1) {
+                    errExit("write");
+                }
+                // Send the meals to the delivery person.
+                currentMealCountForDelivery = 0;
+                // After sending the meal reinitialize the mealsToDeliver
+                mealsToDeliver = (struct MealToDeliver*) malloc(sizeof(struct MealToDeliver));
+                mealsToDeliver->mealCount = 0;
+            }
         }
+        completedMeals = 0;
 
         close(order.clientSocketFd);
         free(coords);
@@ -101,9 +141,11 @@ void* manager(void* arg) {
 
     if (*terminationCondition == SERVER_SHUTDOWN) {
         cancelThreadPool(cookThreads, cookThreadPoolSize);
+        cancelThreadPool(deliveryPersonThreads, deliveryThreadPoolSize);
     }
 
     joinThreadPool(cookThreads, cookThreadPoolSize);
+    joinThreadPool(deliveryPersonThreads, deliveryThreadPoolSize);
 
     close(mealOrderPipe[READ_END_PIPE]);
     close(mealOrderPipe[WRITE_END_PIPE]);

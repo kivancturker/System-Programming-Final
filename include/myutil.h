@@ -54,6 +54,11 @@ struct CookArguments {
     pthread_mutex_t *mealCompletePipeMutex;
 };
 
+struct DeliveryPersonArguments {
+    int deliverySpeed;
+    int mealToDeliverPipe[2];
+};
+
 struct Order {
     int numberOfClients;
     int width;
@@ -83,6 +88,14 @@ struct Meal {
     pthread_t cookDealWith;
 };
 
+struct MealToDeliver {
+    struct Meal meal[3];
+    int mealCount;
+    int width;
+    int height;
+    long timeTaken;
+};
+
 void errExit(const char* errMessage);
 int parseServerArguments(int argc, char *argv[], struct ServerArguments *args);
 int validateServerArguments(const struct ServerArguments *args);
@@ -96,6 +109,8 @@ int isPrime(int num);
 void createThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), void* arg);
 void joinThreadPool(pthread_t* threads, int threadPoolSize);
 void cancelThreadPool(pthread_t* threads, int threadPoolSize);
+double calculateDistance(int x1, int y1, int x2, int y2);
+long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int height, int deliverySpeed);
 
 
 #endif //MYUTIL_H

@@ -122,11 +122,11 @@ long calculatePseudoInverseMatrix(struct Matrix* matrix) {
     clock_t start = clock();
 
     int number = matrix->number;
-    int closestPrime = 2; // Start with the first prime number
+    // int closestPrime = 2; // Start with the first prime number
 
     for (int i = 2; i <= number; i++) {
         if (isPrime(i)) {
-            closestPrime = i;
+            // closestPrime = i;
         }
     }
 
@@ -176,4 +176,36 @@ void cancelThreadPool(pthread_t* threads, int threadPoolSize) {
             exit(EXIT_FAILURE);
         }
     }
+}
+
+// Helper function to calculate the Euclidean distance between two points
+double calculateDistance(int x1, int y1, int x2, int y2) {
+    return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
+// Calculate the delivery time based on coordinates and delivery speed
+long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int height, int deliverySpeed) {
+    int centerX = width / 2;
+    int centerY = height / 2;
+    double totalDistance = 0.0;
+
+    struct Coord prevCoord = {centerX, centerY};
+    for (int i = 0; i < mealToDeliver.mealCount; i++) {
+        struct Coord coord = mealToDeliver.meal[i].coord;
+        // Calculate distance from shop to each delivery point
+        totalDistance += calculateDistance(prevCoord.x, prevCoord.y, coord.x, coord.y);
+        prevCoord = coord;
+    }
+
+    // Account for the return trip distance
+    totalDistance += calculateDistance(prevCoord.x, prevCoord.y, centerX, centerY);
+
+    // Calculate time in seconds, then convert to milliseconds
+    if (deliverySpeed == 0) {
+        deliverySpeed = 1;
+    }
+    double timeInSeconds = totalDistance / deliverySpeed;
+    long timeInMilliseconds = (long)(timeInSeconds * 1000);
+
+    return timeInMilliseconds;
 }
