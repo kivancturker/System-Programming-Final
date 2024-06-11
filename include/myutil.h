@@ -22,6 +22,35 @@ enum TerminationCondition {
     NO_TERMINATION
 };
 
+struct Coord {
+    int x;
+    int y;
+};
+
+struct Matrix {
+    int number;
+};
+
+struct Meal {
+    struct Matrix matrix;
+    struct Coord coord;
+    long timeTaken;
+    pthread_t cookDealWith;
+    int customerNo;
+};
+
+struct Oven {
+    struct Meal meals[OVEN_CAPACITY];
+    int occupiedSpots[OVEN_CAPACITY]; // 0 means available, 1 means occupied
+    int mealCount;
+    pthread_mutex_t mutex;
+    struct Queue* cookQueueWaitingToPlaceMeal;
+    struct Queue* cookQueueWaitingToRemoveMeal;
+    pthread_cond_t cookQueueWaitingToPlaceMealCond;
+    pthread_cond_t cookQueueWaitingToRemoveMealCond;
+    int aparatusCount;
+};
+
 struct ServerArguments {
     int portnumber;
     int cookThreadPoolSize;
@@ -65,29 +94,17 @@ struct Order {
     int numberOfClients;
     int width;
     int height;
+    pid_t clientPid;
     int clientSocketFd;
+    struct Meal* meals;
 };
 
 struct OrderRequest {
     int numberOfClients;
     int width;
     int height;
-};
-
-struct Coord {
-    int x;
-    int y;
-};
-
-struct Matrix {
-    int number;
-};
-
-struct Meal {
-    struct Matrix matrix;
-    struct Coord coord;
-    long timeTaken;
-    pthread_t cookDealWith;
+    pid_t pid;
+    struct Meal meal;
 };
 
 struct MealToDeliver {
@@ -96,18 +113,6 @@ struct MealToDeliver {
     int width;
     int height;
     long timeTaken;
-};
-
-struct Oven {
-    struct Meal meals[OVEN_CAPACITY];
-    int occupiedSpots[OVEN_CAPACITY]; // 0 means available, 1 means occupied
-    int mealCount;
-    pthread_mutex_t mutex;
-    struct Queue* cookQueueWaitingToPlaceMeal;
-    struct Queue* cookQueueWaitingToRemoveMeal;
-    pthread_cond_t cookQueueWaitingToPlaceMealCond;
-    pthread_cond_t cookQueueWaitingToRemoveMealCond;
-    int aparatusCount;
 };
 
 void errExit(const char* errMessage);

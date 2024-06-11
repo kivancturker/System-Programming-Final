@@ -88,6 +88,7 @@ void* manager(void* arg) {
     int expectedMeals = 0;
     int currentMealCountForDelivery = 0;
     struct MealToDeliver* mealsToDeliver;
+    struct Meal* meals;
     while (1) {
         pthread_mutex_lock(managerWorkMutex);
         // Avoid spurious wakeups
@@ -96,19 +97,15 @@ void* manager(void* arg) {
             pthread_mutex_unlock(managerWorkMutex);
             break;
         }
+
         NO_EINTR(readBytes = read(orderPipe[READ_END_PIPE], &order, sizeof(struct Order)));
         if (readBytes == -1) {
             errExit("read");
         }
+
         logAndPrintMessage("Order received from client: %d %d %d %d\n", order.numberOfClients, order.width, order.height, order.clientSocketFd);
-        struct Coord* coords = generateRandomCoord(order.width, order.height, order.numberOfClients);
-        struct Matrix* matrices = generateMatrix(order.numberOfClients);
-        struct Meal *meals = (struct Meal*) malloc(order.numberOfClients * sizeof(struct Meal));
-        for (int i = 0; i < order.numberOfClients; i++) {
-            meals[i].matrix = matrices[i];
-            meals[i].coord = coords[i];
-        }
         expectedMeals = order.numberOfClients;
+        meals = order.meals;
 
         mealsToDeliver = (struct MealToDeliver*) malloc(sizeof(struct MealToDeliver));
         mealsToDeliver->mealCount = 0;
@@ -127,7 +124,6 @@ void* manager(void* arg) {
             }
             completedMeals++;
             currentMealCountForDelivery++;
-            // printf("Time takken for meal %d: %ld and meal is %d\n", i, meals[i].timeTaken, meals[i].matrix.number);
 
             // Send meals to the available delivery person
             // Either 3 meals or remaining meals then delivery person goes.
@@ -150,8 +146,7 @@ void* manager(void* arg) {
         completedMeals = 0;
 
         close(order.clientSocketFd);
-        free(coords);
-        free(matrices);
+        free(meals);
         pthread_mutex_unlock(managerWorkMutex);
     }
 

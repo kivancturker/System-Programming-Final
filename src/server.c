@@ -3,6 +3,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -75,6 +76,9 @@ int main(int argc, char *argv[]) {
     int readBytes = 0;
     int writtenBytes = 0;
     int connectedClientCount = 0;
+    int numberOfClients = 0;
+    int i = 0;
+    struct Meal *meals;
     while(sigIntCount == 0) {
         // accept connection 
         clientFd = accept(socketFd, NULL, NULL);
@@ -88,17 +92,28 @@ int main(int argc, char *argv[]) {
         connectedClientCount++;
         logAndPrintMessage("Client%d Connected\n", connectedClientCount);
         // Read the message from client
-        NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));
-        if (readBytes == -1) {
-            errExit("read");
-        }
+        do {
+            NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));
+            if (readBytes == -1) {
+                errExit("read");
+            }
+            numberOfClients = orderRequest.numberOfClients;
+            if (i == 0) {
+                meals = (struct Meal*) malloc(numberOfClients * sizeof(struct Meal));
+            }
+            meals[i] = orderRequest.meal;
+            i++;
+        } while(i < numberOfClients);
+        i = 0;
+        numberOfClients = 0;
+
         order = (struct Order) {
-            .numberOfClients = orderRequest.numberOfClients,
-            .width = orderRequest.width,
-            .height = orderRequest.height,
-            .clientSocketFd = clientFd
+                .numberOfClients = orderRequest.numberOfClients,
+                .width = orderRequest.width,
+                .height = orderRequest.height,
+                .clientSocketFd = clientFd,
+                .meals = meals
         };
-        // Send the connection to manager through pipe
         NO_EINTR(writtenBytes = write(orderPipe[WRITE_END_PIPE], &order, sizeof(struct Order)));
         if (writtenBytes == -1) {
             errExit("write");

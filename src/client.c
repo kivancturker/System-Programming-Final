@@ -3,6 +3,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
@@ -32,21 +33,39 @@ int main(int argc, char *argv[]) {
 
     char *defaultHostname = "localhost";
 
+    // Generate coordinates for each customer
+    struct Coord* coords = generateRandomCoord(args.width, args.height, args.numberOfClients);
+    struct Matrix* matrices = generateMatrix(args.numberOfClients);
+    struct Meal *meals = (struct Meal*) malloc(args.numberOfClients * sizeof(struct Meal));
+    for (int i = 0; i < args.numberOfClients; i++) {
+        meals[i].matrix = matrices[i];
+        meals[i].coord = coords[i];
+        meals[i].customerNo = i + 1;
+    }
+
     int socketFd = connectToServer(defaultHostname, args.portnumber);
     if (socketFd < 0) {
         errExit("connectToServer");
     }
 
-    struct OrderRequest orderRequest = {
-        .numberOfClients = args.numberOfClients,
-        .width = args.width,
-        .height = args.height
-    };
+    for (int i = 0; i < args.numberOfClients; i++) {
+        struct OrderRequest orderRequest = {
+            .numberOfClients = args.numberOfClients,
+            .width = args.width,
+            .height = args.height,
+            .meal = meals[i],
+            .pid = getpid()
+        };
 
-    // Send the order request to the server
-    if (write(socketFd, &orderRequest, sizeof(struct OrderRequest)) == -1) {
-        errExit("write");
+        // Send the order request including one meal
+        if (write(socketFd, &orderRequest, sizeof(orderRequest)) == -1) {
+            errExit("write");
+        }
     }
+
+    free(coords);
+    free(matrices);
+    free(meals);
 
     close(socketFd);
 
