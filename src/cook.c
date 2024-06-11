@@ -12,8 +12,7 @@ void* cook(void* arg) {
     pthread_mutex_t* managerWorkMutex = args->managerWorkMutex;
     pthread_cond_t* managerWorkCond = args->managerWorkCond;
     pthread_cond_t* cookWorkCond = args->cookWorkCond;
-    pthread_mutex_t *mealOrderPipeMutex = args->mealOrderPipeMutex;
-    pthread_mutex_t *mealCompletePipeMutex = args->mealCompletePipeMutex;
+    struct Oven *oven = args->oven;
 
     // In a loop read from the pipe and print the result after that close the client socket
     struct Meal meal;
@@ -29,10 +28,20 @@ void* cook(void* arg) {
         meal.timeTaken = calculatePseudoInverseMatrix(&meal.matrix);
 
         // Place it in the oven
+        placeMealInOven(oven, pthread_self(), meal);
 
         // Wait for half the time
+        timeTaken = meal.timeTaken / 2;
+        // sleep for nanoseconds
+        struct timespec ts;
+        ts.tv_sec = 0;
+        ts.tv_nsec = timeTaken;
+        pthread_cond_timedwait(cookWorkCond, managerWorkMutex, &ts);
 
         // Take it out of the oven
+        removeMealFromOven(oven, pthread_self());
+
+        meal.cookDealWith = pthread_self();
         
         NO_EINTR(writeBytes = write(mealCompletePipe[WRITE_END_PIPE], &meal, sizeof(struct Meal)));
         if (writeBytes == -1) {

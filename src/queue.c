@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 
-// Initialize the queue
 int initQueue(struct Queue* queue, int capacity) {
     if (queue == NULL || capacity <= 0) {
         return -1; // Invalid queue pointer or capacity
@@ -18,7 +17,6 @@ int initQueue(struct Queue* queue, int capacity) {
     return 0; // Queue initialized successfully
 }
 
-// Enqueue a connection request into the queue
 int enqueue(struct Queue* queue, pthread_t thread) {
     if (queue == NULL || queue->threads == NULL) {
         return -1; // Invalid queue pointer
@@ -32,7 +30,6 @@ int enqueue(struct Queue* queue, pthread_t thread) {
     return 0; // Enqueue operation successful
 }
 
-// Dequeue a connection request from the queue
 int dequeue(struct Queue* queue, pthread_t* thread) {
     if (queue == NULL || queue->threads == NULL || thread == NULL) {
         return -1; // Invalid queue or thread pointer
@@ -46,7 +43,17 @@ int dequeue(struct Queue* queue, pthread_t* thread) {
     return 0; // Dequeue operation successful
 }
 
-// Check if the queue is empty
+int peek(struct Queue* queue, pthread_t* thread) {
+    if (queue == NULL || queue->threads == NULL || thread == NULL) {
+        return -1; // Invalid queue or thread pointer
+    }
+    if (queue->size <= 0) {
+        return -1; // Queue is empty
+    }
+    *thread = queue->threads[queue->frontIndex];
+    return 0; // Peek operation successful
+}
+
 int isQueueEmpty(struct Queue* queue) {
     if (queue == NULL) {
         return -1; // Invalid queue pointer

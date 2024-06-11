@@ -18,10 +18,9 @@ SERVER_SRC = $(SRC_DIR)/server.c $(SHARED_SRC) \
 			 $(SRC_DIR)/manager.c \
 			 $(SRC_DIR)/logger.c \
 			 $(SRC_DIR)/cook.c \
-			 $(SRC_DIR)/delivery.c \
-			 $(SRC_DIR)/queue.c
+			 $(SRC_DIR)/delivery.c
 CLIENT_SRC = $(SRC_DIR)/client.c $(SHARED_SRC)
-SHARED_SRC = $(SRC_DIR)/myutil.c $(SRC_DIR)/sockconn.c
+SHARED_SRC = $(SRC_DIR)/queue.c $(SRC_DIR)/myutil.c $(SRC_DIR)/sockconn.c
 
 # Object files
 SERVER_OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SERVER_SRC))

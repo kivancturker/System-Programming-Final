@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "cook.h"
 #include "delivery.h"
+#include "queue.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,13 +41,24 @@ void* manager(void* arg) {
         errExit("pipe");
     }
 
-    pthread_mutex_t mealOrderPipeMutex = PTHREAD_MUTEX_INITIALIZER;
-    pthread_mutex_t mealCompletePipeMutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t cookWorkCond = PTHREAD_COND_INITIALIZER;
 
+    struct Queue cookQueueWaitingToPlaceMeal;
+    struct Queue cookQueueWaitingToRemoveMeal;
+    initQueue(&cookQueueWaitingToPlaceMeal, cookThreadPoolSize);
+    initQueue(&cookQueueWaitingToRemoveMeal, cookThreadPoolSize);
+    struct Meal emptyMeal;
+
     struct Oven oven = {
+        .meals = {emptyMeal, emptyMeal, emptyMeal, emptyMeal, emptyMeal, emptyMeal},
         .occupiedSpots = {0, 0, 0, 0, 0, 0},
-        .mutex = PTHREAD_MUTEX_INITIALIZER
+        .mutex = PTHREAD_MUTEX_INITIALIZER,
+        .aparatusCount = 3,
+        .mealCount = 0,
+        .cookQueueWaitingToPlaceMeal = &cookQueueWaitingToPlaceMeal,
+        .cookQueueWaitingToRemoveMeal = &cookQueueWaitingToRemoveMeal,
+        .cookQueueWaitingToPlaceMealCond = PTHREAD_COND_INITIALIZER,
+        .cookQueueWaitingToRemoveMealCond = PTHREAD_COND_INITIALIZER
     };
 
     // Create the cook threads
@@ -56,8 +68,6 @@ void* manager(void* arg) {
         .managerWorkMutex = managerWorkMutex,
         .managerWorkCond = managerWorkCond,
         .cookWorkCond = &cookWorkCond,
-        .mealOrderPipeMutex = &mealOrderPipeMutex,
-        .mealCompletePipeMutex = &mealCompletePipeMutex,
         .oven = &oven
     };
     pthread_t cookThreads[cookThreadPoolSize];
@@ -152,6 +162,9 @@ void* manager(void* arg) {
 
     joinThreadPool(cookThreads, cookThreadPoolSize);
     joinThreadPool(deliveryPersonThreads, deliveryThreadPoolSize);
+
+    destroyQueue(&cookQueueWaitingToPlaceMeal);
+    destroyQueue(&cookQueueWaitingToRemoveMeal);
 
     close(mealOrderPipe[READ_END_PIPE]);
     close(mealOrderPipe[WRITE_END_PIPE]);

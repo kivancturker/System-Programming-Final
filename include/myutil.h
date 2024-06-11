@@ -5,6 +5,8 @@
 #ifndef MYUTIL_H
 #define MYUTIL_H
 
+#include "queue.h"
+
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
@@ -12,6 +14,7 @@
 #define NO_EINTR(expr) while ((expr) == -1 && errno == EINTR);
 #define READ_END_PIPE 0
 #define WRITE_END_PIPE 1
+#define OVEN_CAPACITY 6
 
 enum TerminationCondition {
     SERVER_SHUTDOWN,
@@ -51,8 +54,6 @@ struct CookArguments {
     pthread_mutex_t *managerWorkMutex;
     pthread_cond_t *managerWorkCond;
     pthread_cond_t *cookWorkCond;
-    pthread_mutex_t *mealOrderPipeMutex;
-    pthread_mutex_t *mealCompletePipeMutex;
 };
 
 struct DeliveryPersonArguments {
@@ -98,8 +99,15 @@ struct MealToDeliver {
 };
 
 struct Oven {
-    int occupiedSpots[6]; // 0 means available, 1 means occupied
+    struct Meal meals[OVEN_CAPACITY];
+    int occupiedSpots[OVEN_CAPACITY]; // 0 means available, 1 means occupied
+    int mealCount;
     pthread_mutex_t mutex;
+    struct Queue* cookQueueWaitingToPlaceMeal;
+    struct Queue* cookQueueWaitingToRemoveMeal;
+    pthread_cond_t cookQueueWaitingToPlaceMealCond;
+    pthread_cond_t cookQueueWaitingToRemoveMealCond;
+    int aparatusCount;
 };
 
 void errExit(const char* errMessage);
@@ -118,8 +126,8 @@ void cancelThreadPool(pthread_t* threads, int threadPoolSize);
 double calculateDistance(int x1, int y1, int x2, int y2);
 long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int height, int deliverySpeed);
 int getIndexOfAvailableSpotInOven(struct Oven oven);
-int putMealInOven(struct Oven *oven);
-int takeMealFromOven(struct Oven *oven);
+void placeMealInOven(struct Oven *oven, pthread_t cookThread, struct Meal meal);
+void removeMealFromOven(struct Oven *oven, pthread_t cookThread);
 
 
 #endif //MYUTIL_H

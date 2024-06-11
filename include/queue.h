@@ -1,8 +1,6 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include "myutil.h"
-
 #include <pthread.h>
 
 struct Queue {
@@ -16,6 +14,7 @@ struct Queue {
 int initQueue(struct Queue* queue, int capacity);
 int enqueue(struct Queue* queue, pthread_t thread);
 int dequeue(struct Queue* queue, pthread_t* thread);
+int peek(struct Queue* queue, pthread_t* thread);
 int isQueueEmpty(struct Queue* queue);
 void destroyQueue(struct Queue* queue);
 

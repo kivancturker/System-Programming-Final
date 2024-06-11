@@ -219,18 +219,88 @@ int getIndexOfAvailableSpotInOven(struct Oven oven) {
     return -1; // No available spot found
 }
 
-int putMealInOven(struct Oven *oven) {
+void placeMealInOven(struct Oven *oven, pthread_t cookThread, struct Meal meal) {
     pthread_mutex_lock(&oven->mutex);
 
+    // Check if there is an available spot
     int index = getIndexOfAvailableSpotInOven(*oven);
-    if (index != -1) {
-        oven->occupiedSpots[index] = 1; // Mark the spot as occupied
-        oven->mealCount++;
-        printf("Meal placed in oven at spot %d. Current meal count: %d\n", index, oven->mealCount);
-    } else {
-        printf("No available spot to place the meal.\n");
+
+    // Enqueue the current thread if it needs to wait
+    if (index == -1 || 
+            (oven->cookQueueWaitingToPlaceMeal->size > 0 && 
+            oven->cookQueueWaitingToPlaceMeal->threads[oven->cookQueueWaitingToPlaceMeal->frontIndex] != cookThread)) {
+        enqueue(oven->cookQueueWaitingToPlaceMeal, cookThread);
+
+        pthread_t nextCookThread;
+        do {
+            // Wait until the condition is met (available spot and it's the current thread's turn)
+            pthread_cond_wait(&oven->cookQueueWaitingToPlaceMealCond, &oven->mutex);
+            index = getIndexOfAvailableSpotInOven(*oven);
+            peek(oven->cookQueueWaitingToPlaceMeal, &nextCookThread);
+        } while (index == -1 || nextCookThread != cookThread);
+
+        // Dequeue the current thread
+        dequeue(oven->cookQueueWaitingToPlaceMeal, &nextCookThread);
     }
 
+    // Place the meal in the oven
+    oven->meals[index] = meal;
+    oven->occupiedSpots[index] = 1; // Mark the spot as occupied
+    oven->mealCount++;
+    oven->aparatusCount--;
+
+    // Signal the next waiting thread
+    pthread_cond_signal(&oven->cookQueueWaitingToPlaceMealCond);
+
     pthread_mutex_unlock(&oven->mutex);
-    return index; // Return the index where the meal was placed, or -1 if none
+}
+
+
+void removeMealFromOven(struct Oven *oven, pthread_t cookThread) {
+    pthread_mutex_lock(&oven->mutex);
+
+    // Enqueue the current thread for removing a meal if necessary
+    if (oven->mealCount == 0 || 
+            (oven->cookQueueWaitingToRemoveMeal->size > 0 && 
+            oven->cookQueueWaitingToRemoveMeal->threads[oven->cookQueueWaitingToRemoveMeal->frontIndex] != cookThread)) {
+        enqueue(oven->cookQueueWaitingToRemoveMeal, cookThread);
+
+        pthread_t nextCookThread;
+        do {
+            // Wait until there is a meal to remove and it's this thread's turn
+            pthread_cond_wait(&oven->cookQueueWaitingToRemoveMealCond, &oven->mutex);
+            // Check if there's a meal to remove
+            if (oven->mealCount > 0) {
+                peek(oven->cookQueueWaitingToRemoveMeal, &nextCookThread);
+            }
+        } while (oven->mealCount == 0 || nextCookThread != cookThread);
+
+        // Dequeue the current thread
+        dequeue(oven->cookQueueWaitingToRemoveMeal, &nextCookThread);
+    }
+
+    // Find the first occupied spot
+    int index = -1;
+    for (int i = 0; i < OVEN_CAPACITY; i++) {
+        if (oven->occupiedSpots[i] == 1) {
+            index = i;
+            break;
+        }
+    }
+
+    // Take the meal from the oven
+    if (index != -1) {
+        oven->meals[index] = (struct Meal){0}; // Optionally clear the meal struct
+        oven->occupiedSpots[index] = 0; // Mark the spot as available
+        oven->mealCount--;
+        oven->aparatusCount++; // Increment the apparatus count as it's now free
+
+        // Notify threads waiting to place meals
+        pthread_cond_signal(&oven->cookQueueWaitingToPlaceMealCond);
+    }
+
+    // Notify other waiting threads for removing meals
+    pthread_cond_signal(&oven->cookQueueWaitingToRemoveMealCond);
+
+    pthread_mutex_unlock(&oven->mutex);
 }
