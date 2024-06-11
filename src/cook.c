@@ -27,6 +27,12 @@ void* cook(void* arg) {
         }
 
         meal.timeTaken = calculatePseudoInverseMatrix(&meal.matrix);
+
+        // Place it in the oven
+
+        // Wait for half the time
+
+        // Take it out of the oven
         
         NO_EINTR(writeBytes = write(mealCompletePipe[WRITE_END_PIPE], &meal, sizeof(struct Meal)));
         if (writeBytes == -1) {

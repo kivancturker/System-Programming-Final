@@ -209,3 +209,28 @@ long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int he
 
     return timeInMilliseconds;
 }
+
+int getIndexOfAvailableSpotInOven(struct Oven oven) {
+    for (int i = 0; i < 6; i++) {
+        if (oven.occupiedSpots[i] == 0) {
+            return i;
+        }
+    }
+    return -1; // No available spot found
+}
+
+int putMealInOven(struct Oven *oven) {
+    pthread_mutex_lock(&oven->mutex);
+
+    int index = getIndexOfAvailableSpotInOven(*oven);
+    if (index != -1) {
+        oven->occupiedSpots[index] = 1; // Mark the spot as occupied
+        oven->mealCount++;
+        printf("Meal placed in oven at spot %d. Current meal count: %d\n", index, oven->mealCount);
+    } else {
+        printf("No available spot to place the meal.\n");
+    }
+
+    pthread_mutex_unlock(&oven->mutex);
+    return index; // Return the index where the meal was placed, or -1 if none
+}

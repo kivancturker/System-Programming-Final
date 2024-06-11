@@ -47,6 +47,7 @@ struct ManagerArguments {
 struct CookArguments {
     int mealOrderPipe[2];
     int mealCompletePipe[2];
+    struct Oven *oven;
     pthread_mutex_t *managerWorkMutex;
     pthread_cond_t *managerWorkCond;
     pthread_cond_t *cookWorkCond;
@@ -96,6 +97,11 @@ struct MealToDeliver {
     long timeTaken;
 };
 
+struct Oven {
+    int occupiedSpots[6]; // 0 means available, 1 means occupied
+    pthread_mutex_t mutex;
+};
+
 void errExit(const char* errMessage);
 int parseServerArguments(int argc, char *argv[], struct ServerArguments *args);
 int validateServerArguments(const struct ServerArguments *args);
@@ -111,6 +117,9 @@ void joinThreadPool(pthread_t* threads, int threadPoolSize);
 void cancelThreadPool(pthread_t* threads, int threadPoolSize);
 double calculateDistance(int x1, int y1, int x2, int y2);
 long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int height, int deliverySpeed);
+int getIndexOfAvailableSpotInOven(struct Oven oven);
+int putMealInOven(struct Oven *oven);
+int takeMealFromOven(struct Oven *oven);
 
 
 #endif //MYUTIL_H

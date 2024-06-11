@@ -44,6 +44,11 @@ void* manager(void* arg) {
     pthread_mutex_t mealCompletePipeMutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t cookWorkCond = PTHREAD_COND_INITIALIZER;
 
+    struct Oven oven = {
+        .occupiedSpots = {0, 0, 0, 0, 0, 0},
+        .mutex = PTHREAD_MUTEX_INITIALIZER
+    };
+
     // Create the cook threads
     struct CookArguments cookArgs = {
         .mealOrderPipe = {mealOrderPipe[0], mealOrderPipe[1]},
@@ -52,7 +57,8 @@ void* manager(void* arg) {
         .managerWorkCond = managerWorkCond,
         .cookWorkCond = &cookWorkCond,
         .mealOrderPipeMutex = &mealOrderPipeMutex,
-        .mealCompletePipeMutex = &mealCompletePipeMutex
+        .mealCompletePipeMutex = &mealCompletePipeMutex,
+        .oven = &oven
     };
     pthread_t cookThreads[cookThreadPoolSize];
     createThreadPool(cookThreads, cookThreadPoolSize, cook, &cookArgs);
