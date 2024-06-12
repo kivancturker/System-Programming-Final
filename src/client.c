@@ -33,6 +33,8 @@ int main(int argc, char *argv[]) {
 
     char *defaultHostname = "localhost";
 
+    printf("PID %d\n", getpid());
+
     // Generate coordinates for each customer
     struct Coord* coords = generateRandomCoord(args.width, args.height, args.numberOfClients);
     struct Matrix* matrices = generateMatrix(args.numberOfClients);
@@ -48,14 +50,14 @@ int main(int argc, char *argv[]) {
         errExit("connectToServer");
     }
 
+    struct OrderRequest orderRequest = {0};
+
     for (int i = 0; i < args.numberOfClients; i++) {
-        struct OrderRequest orderRequest = {
-            .numberOfClients = args.numberOfClients,
-            .width = args.width,
-            .height = args.height,
-            .meal = meals[i],
-            .pid = getpid()
-        };
+        orderRequest.numberOfClients = args.numberOfClients;
+        orderRequest.width = args.width;
+        orderRequest.height = args.height;
+        orderRequest.meal = meals[i];
+        orderRequest.pid = getpid();
 
         // Send the order request including one meal
         if (write(socketFd, &orderRequest, sizeof(orderRequest)) == -1) {

@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
     int i = 0;
     struct Meal *meals;
     while(sigIntCount == 0) {
+        logAndPrintMessage("PideShop active waiting for connection ...\n");
         // accept connection 
         clientFd = accept(socketFd, NULL, NULL);
         if (clientFd == -1) {
@@ -90,7 +91,6 @@ int main(int argc, char *argv[]) {
         }
         // Log connection
         connectedClientCount++;
-        logAndPrintMessage("Client%d Connected\n", connectedClientCount);
         // Read the message from client
         do {
             NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));

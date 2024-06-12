@@ -44,10 +44,7 @@ struct Oven {
     int occupiedSpots[OVEN_CAPACITY]; // 0 means available, 1 means occupied
     int mealCount;
     pthread_mutex_t mutex;
-    struct Queue* cookQueueWaitingToPlaceMeal;
-    struct Queue* cookQueueWaitingToRemoveMeal;
-    pthread_cond_t cookQueueWaitingToPlaceMealCond;
-    pthread_cond_t cookQueueWaitingToRemoveMealCond;
+    pthread_cond_t ovenIsFull;
     int aparatusCount;
 };
 
@@ -131,8 +128,8 @@ void cancelThreadPool(pthread_t* threads, int threadPoolSize);
 double calculateDistance(int x1, int y1, int x2, int y2);
 long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int height, int deliverySpeed);
 int getIndexOfAvailableSpotInOven(struct Oven oven);
-void placeMealInOven(struct Oven *oven, pthread_t cookThread, struct Meal meal);
-void removeMealFromOven(struct Oven *oven, pthread_t cookThread);
+void placeMealInOven(struct Oven *oven, struct Meal meal);
+void removeMealFromOven(struct Oven *oven, pthread_t cookThread, struct Meal *meal);
 
 
 #endif //MYUTIL_H

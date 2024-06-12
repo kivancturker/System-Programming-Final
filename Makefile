@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler Flags
-CFLAGS = -I$(INCLUDE_DIR) -Wall -pthread -std=gnu99
+CFLAGS = -I$(INCLUDE_DIR) -Wall -pthread -lm -std=gnu99
 
 # Directories
 SRC_DIR = src
@@ -31,24 +31,24 @@ all: $(SERVER_EXE) $(CLIENT_EXE)
 
 # Build server executable
 $(SERVER_EXE): $(SERVER_OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS)
 
 # Build client executable
 $(CLIENT_EXE): $(CLIENT_OBJ)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(CFLAGS)
 
 # Compile source files to object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 # Run server
 run_server: $(SERVER_EXE)
-	./$(SERVER_EXE) 12345 4 6 1 &
+	./$(SERVER_EXE) 5398 10 10 10
 
 # Run client
 run_client: $(CLIENT_EXE)
-	./$(CLIENT_EXE) 12345 50 10 20
+	./$(CLIENT_EXE) 5398 50 10 20
 
 # Run both server and client
 run: run_server run_client

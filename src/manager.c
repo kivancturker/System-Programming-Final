@@ -55,10 +55,7 @@ void* manager(void* arg) {
         .mutex = PTHREAD_MUTEX_INITIALIZER,
         .aparatusCount = 3,
         .mealCount = 0,
-        .cookQueueWaitingToPlaceMeal = &cookQueueWaitingToPlaceMeal,
-        .cookQueueWaitingToRemoveMeal = &cookQueueWaitingToRemoveMeal,
-        .cookQueueWaitingToPlaceMealCond = PTHREAD_COND_INITIALIZER,
-        .cookQueueWaitingToRemoveMealCond = PTHREAD_COND_INITIALIZER
+        .ovenIsFull = PTHREAD_COND_INITIALIZER
     };
 
     // Create the cook threads
@@ -103,7 +100,7 @@ void* manager(void* arg) {
             errExit("read");
         }
 
-        logAndPrintMessage("Order received from client: %d %d %d %d\n", order.numberOfClients, order.width, order.height, order.clientSocketFd);
+        logAndPrintMessage("%d new customers... Serving\n", order.numberOfClients);
         expectedMeals = order.numberOfClients;
         meals = order.meals;
 
@@ -144,6 +141,7 @@ void* manager(void* arg) {
             }
         }
         completedMeals = 0;
+        logAndPrintMessage("done serving client PID: %d\n", order.clientPid);
 
         close(order.clientSocketFd);
         free(meals);

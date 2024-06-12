@@ -19,6 +19,7 @@ void* cook(void* arg) {
     int readBytes = 0;
     int writeBytes = 0;
     long timeTaken = 0;
+    struct timespec ts;
     while (1) {
         NO_EINTR(readBytes = read(mealOrderPipe[READ_END_PIPE], &meal, sizeof(struct Meal)));
         if (readBytes == -1) {
@@ -26,22 +27,19 @@ void* cook(void* arg) {
         }
 
         meal.timeTaken = calculatePseudoInverseMatrix(&meal.matrix);
+        meal.cookDealWith = pthread_self();
 
         // Place it in the oven
-        placeMealInOven(oven, pthread_self(), meal);
+        placeMealInOven(oven, meal);
 
         // Wait for half the time
         timeTaken = meal.timeTaken / 2;
-        // sleep for nanoseconds
-        struct timespec ts;
-        ts.tv_sec = 0;
-        ts.tv_nsec = timeTaken;
-        pthread_cond_timedwait(cookWorkCond, managerWorkMutex, &ts);
+        ts.tv_sec = timeTaken / 1000000000L;
+        ts.tv_nsec = timeTaken % 1000000000L;
+        nanosleep(&ts, NULL);
 
         // Take it out of the oven
-        removeMealFromOven(oven, pthread_self());
-
-        meal.cookDealWith = pthread_self();
+        removeMealFromOven(oven, pthread_self(), &meal);
         
         NO_EINTR(writeBytes = write(mealCompletePipe[WRITE_END_PIPE], &meal, sizeof(struct Meal)));
         if (writeBytes == -1) {
