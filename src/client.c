@@ -37,10 +37,8 @@ int main(int argc, char *argv[]) {
 
     // Generate coordinates for each customer
     struct Coord* coords = generateRandomCoord(args.width, args.height, args.numberOfClients);
-    struct Matrix* matrices = generateMatrix(args.numberOfClients);
     struct Meal *meals = (struct Meal*) malloc(args.numberOfClients * sizeof(struct Meal));
     for (int i = 0; i < args.numberOfClients; i++) {
-        meals[i].matrix = matrices[i];
         meals[i].coord = coords[i];
         meals[i].customerNo = i + 1;
     }
@@ -66,7 +64,6 @@ int main(int argc, char *argv[]) {
     }
 
     free(coords);
-    free(matrices);
     free(meals);
 
     close(socketFd);

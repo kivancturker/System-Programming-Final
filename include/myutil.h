@@ -6,6 +6,7 @@
 #define MYUTIL_H
 
 #include "queue.h"
+#include "matrixops.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -27,12 +28,7 @@ struct Coord {
     int y;
 };
 
-struct Matrix {
-    int number;
-};
-
 struct Meal {
-    struct Matrix matrix;
     struct Coord coord;
     long timeTaken;
     pthread_t cookDealWith;
@@ -119,14 +115,12 @@ int parseClientArguments(int argc, char *argv[], struct ClientArguments *args);
 int validateClientArguments(const struct ClientArguments *args);
 struct Coord* generateRandomCoord(int width, int height, int numberOfCoords);
 int calculateDistanceFromShop(struct Coord coord, int width, int height);
-struct Matrix* generateMatrix(int amount); // Create the matrix and use it throughout the program
-long calculatePseudoInverseMatrix(struct Matrix* matrix);
-int isPrime(int num);
 void createThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), void* arg);
 void joinThreadPool(pthread_t* threads, int threadPoolSize);
 void cancelThreadPool(pthread_t* threads, int threadPoolSize);
 double calculateDistance(int x1, int y1, int x2, int y2);
 long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int height, int deliverySpeed);
+long calculatePseudoInverseMatrix();
 int getIndexOfAvailableSpotInOven(struct Oven oven);
 void placeMealInOven(struct Oven *oven, struct Meal meal);
 void removeMealFromOven(struct Oven *oven, pthread_t cookThread, struct Meal *meal);

@@ -26,7 +26,7 @@ void* cook(void* arg) {
             errExit("read");
         }
 
-        meal.timeTaken = calculatePseudoInverseMatrix(&meal.matrix);
+        meal.timeTaken = calculatePseudoInverseMatrix();
         meal.cookDealWith = pthread_self();
 
         // Place it in the oven
