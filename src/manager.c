@@ -145,7 +145,8 @@ void* manager(void* arg) {
             mealsToDeliver->width = order.width;
             mealsToDeliver->height = order.height;
             if (currentMealCountForDelivery == 3 || completedMeals == expectedMeals) {
-                writeBytes = write(mealToDeliverPipe[WRITE_END_PIPE], mealsToDeliver, sizeof(struct MealToDeliver));
+                struct MealToDeliver* tempMealsToDeliver = mealsToDeliver;
+                writeBytes = write(mealToDeliverPipe[WRITE_END_PIPE], &tempMealsToDeliver, sizeof(struct MealToDeliver*));
                 if (writeBytes == -1) {
                     errExit("write to meal to deliver pipe");
                 }
@@ -170,6 +171,9 @@ void* manager(void* arg) {
         messagePacket.isFinished = 1;
         sendMessagePacket(order.clientSocketFd, &messagePacket, socketMutex);
 
+        if (mealsToDeliver != NULL) {
+            free(mealsToDeliver);
+        }
         close(order.clientSocketFd);
         free(meals);
         pthread_mutex_unlock(managerWorkMutex);

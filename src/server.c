@@ -114,7 +114,8 @@ int main(int argc, char *argv[]) {
                 .width = orderRequest.width,
                 .height = orderRequest.height,
                 .clientSocketFd = clientFd,
-                .meals = meals
+                .meals = meals,
+                .clientPid = orderRequest.pid
         };
         NO_EINTR(writtenBytes = write(orderPipe[WRITE_END_PIPE], &order, sizeof(struct Order)));
         if (writtenBytes == -1) {
