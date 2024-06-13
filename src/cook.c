@@ -33,7 +33,8 @@ void* cook(void* arg) {
             errExit("read from mealOrderPipe");
         }
         clientSocketFd = meal.clientSocketFd;
-        snprintf(packet.message, MAX_MESSAGE_SIZE, "Cook %d STARTED preparing meal for customer %d\n", cookNum, meal.customerNo);
+        snprintf(packet.message, MAX_MESSAGE_SIZE, "Cook %d STARTED preparing meal for customer %d\n", 
+                    cookNum, meal.customerNo);
         sendMessagePacket(clientSocketFd, &packet, socketMutex);
         logMessage(packet.message);
 
@@ -52,7 +53,8 @@ void* cook(void* arg) {
 
         // Take it out of the oven
         removeMealFromOven(oven, cookNum, &meal);
-        snprintf(packet.message, MAX_MESSAGE_SIZE, "Cook %d FINISHED preparing meal for customer %d\n", cookNum, meal.customerNo);
+        snprintf(packet.message, MAX_MESSAGE_SIZE, "Cook %d FINISHED preparing meal for customer %d\n", 
+                    cookNum, meal.customerNo);
         sendMessagePacket(clientSocketFd, &packet, socketMutex);
         logMessage(packet.message);
         

@@ -36,12 +36,12 @@ void* deliveryPerson(void* arg) {
         }
 
         for (int i = 0; i < mealToDeliver->mealCount; i++) {
-            mealToDeliver->meal[i].deliveryPersonNumDealWith = deliveryPersonNum;
+            mealToDeliver->meal[i]->deliveryPersonNumDealWith = deliveryPersonNum;
         }
-        clientSocketFd = mealToDeliver->meal[0].clientSocketFd;
+        clientSocketFd = mealToDeliver->meal[0]->clientSocketFd;
 
         snprintf(packet.message, MAX_MESSAGE_SIZE, "DP %d STARTED delivering to customer %d\n", 
-                    deliveryPersonNum, mealToDeliver->meal[0].customerNo);
+                    deliveryPersonNum, mealToDeliver->meal[0]->customerNo);
         sendMessagePacket(clientSocketFd, &packet, socketMutex);
         logMessage(packet.message);
 
@@ -56,7 +56,7 @@ void* deliveryPerson(void* arg) {
         nanosleep(&req, NULL);
 
         snprintf(packet.message, MAX_MESSAGE_SIZE, "DP %d FINISHED delivering to customer %d\n", 
-                    deliveryPersonNum, mealToDeliver->meal[0].customerNo);
+                    deliveryPersonNum, mealToDeliver->meal[0]->customerNo);
         sendMessagePacket(clientSocketFd, &packet, socketMutex);
         logMessage(packet.message);
 

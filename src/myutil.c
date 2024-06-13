@@ -179,7 +179,7 @@ long calculateDeliveryTime(struct MealToDeliver mealToDeliver, int width, int he
 
     struct Coord prevCoord = {centerX, centerY};
     for (int i = 0; i < mealToDeliver.mealCount; i++) {
-        struct Coord coord = mealToDeliver.meal[i].coord;
+        struct Coord coord = mealToDeliver.meal[i]->coord;
         // Calculate distance from shop to each delivery point
         totalDistance += calculateDistance(prevCoord.x, prevCoord.y, coord.x, coord.y);
         prevCoord = coord;
@@ -255,4 +255,108 @@ void removeMealFromOven(struct Oven *oven, int cookNumDealWith, struct Meal *mea
     }
 
     pthread_mutex_unlock(&oven->mutex);
+}
+
+// Find the cook who handled the most meals
+int getMostEfficientCook(struct Meal* meals, int mealCount, int cookCount) {
+    int cookMealCount[cookCount];
+    for (int i = 0; i < cookCount; i++) {
+        cookMealCount[i] = 0;
+    }
+
+    for (int i = 0; i < mealCount; i++) {
+        int cookNum = meals[i].cookNumDealWith-1;
+        if (cookNum >= 0 && cookNum < cookCount) {
+            cookMealCount[cookNum]++;
+        }
+    }
+
+    int mostEfficientCook = -1;
+    int maxMeals = -1;
+
+    for (int i = 0; i < cookCount; i++) {
+        if (cookMealCount[i] > maxMeals) {
+            maxMeals = cookMealCount[i];
+            mostEfficientCook = i;
+        }
+    }
+
+    return mostEfficientCook+1;
+}
+
+// Find the delivery person who handled the most meals
+int getMostEfficientDeliveryPerson(struct Meal* meals, int mealCount, int deliveryPersonCount) {
+    int deliveryPersonMealCount[deliveryPersonCount];
+    for (int i = 0; i < deliveryPersonCount; i++) {
+        deliveryPersonMealCount[i] = 0;
+    }
+
+    for (int i = 0; i < mealCount; i++) {
+        int deliveryPersonNum = meals[i].deliveryPersonNumDealWith-1;
+        if (deliveryPersonNum >= 0 && deliveryPersonNum < deliveryPersonCount) {
+            deliveryPersonMealCount[deliveryPersonNum]++;
+        }
+    }
+
+    int mostEfficientDeliveryPerson = -1;
+    int maxMeals = -1;
+
+    for (int i = 0; i < deliveryPersonCount; i++) {
+        if (deliveryPersonMealCount[i] > maxMeals) {
+            maxMeals = deliveryPersonMealCount[i];
+            mostEfficientDeliveryPerson = i;
+        }
+    }
+
+    return mostEfficientDeliveryPerson+1;
+}
+
+void printCountOfMealsDeliveredByEachDeliveryPerson(struct Meal* meals, int mealCount, int deliveryPersonCount) {
+    // Array to hold the count of meals delivered by each delivery person
+    int* deliveryCount = (int*)calloc(deliveryPersonCount, sizeof(int));
+    if (deliveryCount == NULL) {
+        perror("Failed to allocate memory");
+        return;
+    }
+
+    // Iterate through the meals and count deliveries for each delivery person
+    for (int i = 0; i < mealCount; i++) {
+        int deliveryPersonNum = meals[i].deliveryPersonNumDealWith;
+        if (deliveryPersonNum >= 0 && deliveryPersonNum < deliveryPersonCount) {
+            deliveryCount[deliveryPersonNum]++;
+        }
+    }
+
+    // Print the count of meals delivered by each delivery person
+    for (int i = 0; i < deliveryPersonCount; i++) {
+        printf("Delivery Person %d delivered %d meals.\n", i, deliveryCount[i]);
+    }
+
+    // Free the allocated memory
+    free(deliveryCount);
+}
+
+void printCountOfMealsPreparedByEachCook(struct Meal* meals, int mealCount, int cookCount) {
+    // Array to hold the count of meals prepared by each cook
+    int* cookCountArray = (int*)calloc(cookCount, sizeof(int));
+    if (cookCountArray == NULL) {
+        perror("Failed to allocate memory");
+        return;
+    }
+
+    // Iterate through the meals and count preparations for each cook
+    for (int i = 0; i < mealCount; i++) {
+        int cookNum = meals[i].cookNumDealWith;
+        if (cookNum >= 0 && cookNum < cookCount) {
+            cookCountArray[cookNum]++;
+        }
+    }
+
+    // Print the count of meals prepared by each cook
+    for (int i = 0; i < cookCount; i++) {
+        printf("Cook %d prepared %d meals.\n", i, cookCountArray[i]);
+    }
+
+    // Free the allocated memory
+    free(cookCountArray);
 }

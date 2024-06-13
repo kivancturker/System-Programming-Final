@@ -70,7 +70,7 @@ void* manager(void* arg) {
         cookArgs[i].managerWorkCond = managerWorkCond;
         cookArgs[i].cookWorkCond = &cookWorkCond;
         cookArgs[i].oven = &oven;
-        cookArgs[i].cookNum = i;
+        cookArgs[i].cookNum = i+1;
         cookArgs[i].socketMutex = socketMutex;
     }
     pthread_t cookThreads[cookThreadPoolSize];
@@ -81,7 +81,7 @@ void* manager(void* arg) {
         deliveryPersonArgs[i].deliverySpeed = deliverySpeed;
         deliveryPersonArgs[i].mealToDeliverPipe[0] = mealToDeliverPipe[0];
         deliveryPersonArgs[i].mealToDeliverPipe[1] = mealToDeliverPipe[1];
-        deliveryPersonArgs[i].deliveryPersonNum = i;
+        deliveryPersonArgs[i].deliveryPersonNum = i+1;
         deliveryPersonArgs[i].socketMutex = socketMutex;
         deliveryPersonArgs[i].deliveryCompletedCond = &deliveryCompletedCond;
         deliveryPersonArgs[i].deliveryCount = &deliveryCount;
@@ -94,12 +94,14 @@ void* manager(void* arg) {
     struct Order order;
     int readBytes = 0;
     int writeBytes = 0;
-    int completedMeals = 0;
+    int completedMealsCount = 0;
     int expectedMeals = 0;
     int currentMealCountForDelivery = 0;
     struct MealToDeliver* mealsToDeliver;
     struct Meal* meals;
     struct MessagePacket messagePacket = {0};
+    int mostEfficientCookNum = 0;
+    int mostEfficientDeliveryPersonNum = 0;
     while (1) {
         pthread_mutex_lock(managerWorkMutex);
         // Avoid spurious wakeups
@@ -135,16 +137,16 @@ void* manager(void* arg) {
             if (readBytes == -1) {
                 errExit("read from meal complete pipe");
             }
-            completedMeals++;
+            completedMealsCount++;
             currentMealCountForDelivery++;
 
             // Send meals to the available delivery person
             // Either 3 meals or remaining meals then delivery person goes.
-            mealsToDeliver->meal[mealsToDeliver->mealCount] = meals[i];
+            mealsToDeliver->meal[mealsToDeliver->mealCount] = &meals[i];
             mealsToDeliver->mealCount++;
             mealsToDeliver->width = order.width;
             mealsToDeliver->height = order.height;
-            if (currentMealCountForDelivery == 3 || completedMeals == expectedMeals) {
+            if (currentMealCountForDelivery == 3 || completedMealsCount == expectedMeals) {
                 struct MealToDeliver* tempMealsToDeliver = mealsToDeliver;
                 writeBytes = write(mealToDeliverPipe[WRITE_END_PIPE], &tempMealsToDeliver, sizeof(struct MealToDeliver*));
                 if (writeBytes == -1) {
@@ -166,8 +168,11 @@ void* manager(void* arg) {
             pthread_cond_wait(&deliveryCompletedCond, &deliveryCountMutex);
         }
         pthread_mutex_unlock(&deliveryCountMutex);
-        completedMeals = 0;
+        completedMealsCount = 0;
+        mostEfficientCookNum = getMostEfficientCook(meals, order.numberOfClients, cookThreadPoolSize);
+        mostEfficientDeliveryPersonNum = getMostEfficientDeliveryPerson(meals, order.numberOfClients, deliveryThreadPoolSize);
         logAndPrintMessage("done serving client PID: %d\n", order.clientPid);
+        logAndPrintMessage("Thanks Cook %d and Moto %d\n", mostEfficientCookNum, mostEfficientDeliveryPersonNum);
         messagePacket.isFinished = 1;
         sendMessagePacket(order.clientSocketFd, &messagePacket, socketMutex);
 

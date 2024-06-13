@@ -117,7 +117,7 @@ struct OrderRequest {
 };
 
 struct MealToDeliver {
-    struct Meal meal[3];
+    struct Meal* meal[3];
     int mealCount;
     int width;
     int height;
@@ -142,6 +142,9 @@ long calculatePseudoInverseMatrix();
 int getIndexOfAvailableSpotInOven(struct Oven oven);
 void placeMealInOven(struct Oven *oven, struct Meal meal);
 void removeMealFromOven(struct Oven *oven, int cookNumDealWith, struct Meal *meal);
-
+int getMostEfficientCook(struct Meal* meals, int mealCount, int cookCount);
+int getMostEfficientDeliveryPerson(struct Meal* meals, int mealCount, int deliveryPersonCount);
+void printCountOfMealsDeliveredByEachDeliveryPerson(struct Meal* meals, int mealCount, int deliveryPersonCount);
+void printCountOfMealsPreparedByEachCook(struct Meal* meals, int mealCount, int cookCount);
 
 #endif //MYUTIL_H
