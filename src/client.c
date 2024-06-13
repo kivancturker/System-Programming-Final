@@ -62,9 +62,19 @@ int main(int argc, char *argv[]) {
             errExit("write");
         }
     }
-
+    
     free(coords);
     free(meals);
+
+    struct MessagePacket messagePacket = {0};
+
+    while(1) {
+        receiveMessagePacket(socketFd, &messagePacket);
+        if (messagePacket.isFinished) {
+            break;
+        }
+        printf("%s", messagePacket.message);
+    }
 
     close(socketFd);
 

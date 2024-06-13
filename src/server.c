@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
     enum TerminationCondition terminationCondition = NO_TERMINATION;
     pthread_cond_t managerWorkCond = PTHREAD_COND_INITIALIZER;
     pthread_mutex_t managerWorkMutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t socketMutex = PTHREAD_MUTEX_INITIALIZER;
 
     int socketFd = establishConnection(args.portnumber);
     if (socketFd < 0) {
@@ -62,7 +63,8 @@ int main(int argc, char *argv[]) {
         .orderPipe = {orderPipe[0], orderPipe[1]},
         .terminationCondition = &terminationCondition,
         .managerWorkCond = &managerWorkCond,
-        .managerWorkMutex = &managerWorkMutex
+        .managerWorkMutex = &managerWorkMutex,
+        .socketMutex = &socketMutex
     };
     // Create Manager Thread
     pthread_t managerThread;
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
         do {
             NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));
             if (readBytes == -1) {
-                errExit("read");
+                errExit("read socket in server");
             }
             numberOfClients = orderRequest.numberOfClients;
             if (i == 0) {
@@ -116,7 +118,7 @@ int main(int argc, char *argv[]) {
         };
         NO_EINTR(writtenBytes = write(orderPipe[WRITE_END_PIPE], &order, sizeof(struct Order)));
         if (writtenBytes == -1) {
-            errExit("write");
+            errExit("write to socket in server");
         }
 
         pthread_mutex_lock(&managerWorkMutex);

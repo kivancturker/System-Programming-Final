@@ -4,6 +4,7 @@
 #include "cook.h"
 #include "delivery.h"
 #include "queue.h"
+#include "sockconn.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@ void* manager(void* arg) {
     enum TerminationCondition* terminationCondition = args->terminationCondition;
     pthread_cond_t* managerWorkCond = args->managerWorkCond;
     pthread_mutex_t* managerWorkMutex = args->managerWorkMutex;
+    pthread_mutex_t* socketMutex = args->socketMutex;
 
     // Seed the random variable once
     srand(time(NULL));
@@ -42,11 +44,10 @@ void* manager(void* arg) {
     }
 
     pthread_cond_t cookWorkCond = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t deliveryCompletedCond = PTHREAD_COND_INITIALIZER;
+    int deliveryCount = 0;
+    pthread_mutex_t deliveryCountMutex = PTHREAD_MUTEX_INITIALIZER;
 
-    struct Queue cookQueueWaitingToPlaceMeal;
-    struct Queue cookQueueWaitingToRemoveMeal;
-    initQueue(&cookQueueWaitingToPlaceMeal, cookThreadPoolSize);
-    initQueue(&cookQueueWaitingToRemoveMeal, cookThreadPoolSize);
     struct Meal emptyMeal;
 
     struct Oven oven = {
@@ -59,23 +60,35 @@ void* manager(void* arg) {
     };
 
     // Create the cook threads
-    struct CookArguments cookArgs = {
-        .mealOrderPipe = {mealOrderPipe[0], mealOrderPipe[1]},
-        .mealCompletePipe = {mealCompletePipe[0], mealCompletePipe[1]},
-        .managerWorkMutex = managerWorkMutex,
-        .managerWorkCond = managerWorkCond,
-        .cookWorkCond = &cookWorkCond,
-        .oven = &oven
-    };
+    struct CookArguments* cookArgs = (struct CookArguments*) malloc(cookThreadPoolSize * sizeof(struct CookArguments));
+    for (int i = 0; i < cookThreadPoolSize; i++) {
+        cookArgs[i].mealOrderPipe[0] = mealOrderPipe[0];
+        cookArgs[i].mealOrderPipe[1] = mealOrderPipe[1];
+        cookArgs[i].mealCompletePipe[0] = mealCompletePipe[0];
+        cookArgs[i].mealCompletePipe[1] = mealCompletePipe[1];
+        cookArgs[i].managerWorkMutex = managerWorkMutex;
+        cookArgs[i].managerWorkCond = managerWorkCond;
+        cookArgs[i].cookWorkCond = &cookWorkCond;
+        cookArgs[i].oven = &oven;
+        cookArgs[i].cookNum = i;
+        cookArgs[i].socketMutex = socketMutex;
+    }
     pthread_t cookThreads[cookThreadPoolSize];
-    createThreadPool(cookThreads, cookThreadPoolSize, cook, &cookArgs);
+    createCookThreadPool(cookThreads, cookThreadPoolSize, cook, cookArgs);
 
-    struct DeliveryPersonArguments deliveryPersonArgs = {
-        .deliverySpeed = deliverySpeed,
-        .mealToDeliverPipe = {mealToDeliverPipe[0], mealToDeliverPipe[1]}
-    };
+    struct DeliveryPersonArguments* deliveryPersonArgs = (struct DeliveryPersonArguments*) malloc(deliveryThreadPoolSize * sizeof(struct DeliveryPersonArguments));
+    for (int i = 0; i < deliveryThreadPoolSize; i++) {
+        deliveryPersonArgs[i].deliverySpeed = deliverySpeed;
+        deliveryPersonArgs[i].mealToDeliverPipe[0] = mealToDeliverPipe[0];
+        deliveryPersonArgs[i].mealToDeliverPipe[1] = mealToDeliverPipe[1];
+        deliveryPersonArgs[i].deliveryPersonNum = i;
+        deliveryPersonArgs[i].socketMutex = socketMutex;
+        deliveryPersonArgs[i].deliveryCompletedCond = &deliveryCompletedCond;
+        deliveryPersonArgs[i].deliveryCount = &deliveryCount;
+        deliveryPersonArgs[i].deliveryCountMutex = &deliveryCountMutex;
+    }
     pthread_t deliveryPersonThreads[deliveryThreadPoolSize];
-    createThreadPool(deliveryPersonThreads, deliveryThreadPoolSize, deliveryPerson, &deliveryPersonArgs);
+    createDeliveryThreadPool(deliveryPersonThreads, deliveryThreadPoolSize, deliveryPerson, deliveryPersonArgs);
 
     // In a loop read from the pipe and print the result after that close the client socket
     struct Order order;
@@ -86,6 +99,7 @@ void* manager(void* arg) {
     int currentMealCountForDelivery = 0;
     struct MealToDeliver* mealsToDeliver;
     struct Meal* meals;
+    struct MessagePacket messagePacket = {0};
     while (1) {
         pthread_mutex_lock(managerWorkMutex);
         // Avoid spurious wakeups
@@ -97,7 +111,7 @@ void* manager(void* arg) {
 
         NO_EINTR(readBytes = read(orderPipe[READ_END_PIPE], &order, sizeof(struct Order)));
         if (readBytes == -1) {
-            errExit("read");
+            errExit("read from order pipe");
         }
 
         logAndPrintMessage("%d new customers... Serving\n", order.numberOfClients);
@@ -108,16 +122,18 @@ void* manager(void* arg) {
         mealsToDeliver->mealCount = 0;
         // Later use the coordinates for delivery person
         for (int i = 0; i < order.numberOfClients; i++) {
+            // Put clientSocketFd in the meal struct
+            meals[i].clientSocketFd = order.clientSocketFd;
             NO_EINTR(writeBytes = write(mealOrderPipe[WRITE_END_PIPE], &meals[i], sizeof(struct Meal)));
             if (writeBytes == -1) {
-                errExit("write");
+                errExit("write to meal order pipe");
             }
         }
 
         for (int i = 0; i < order.numberOfClients; i++) {
             NO_EINTR(readBytes = read(mealCompletePipe[READ_END_PIPE], &meals[i], sizeof(struct Meal)));
             if (readBytes == -1) {
-                errExit("read");
+                errExit("read from meal complete pipe");
             }
             completedMeals++;
             currentMealCountForDelivery++;
@@ -131,17 +147,28 @@ void* manager(void* arg) {
             if (currentMealCountForDelivery == 3 || completedMeals == expectedMeals) {
                 writeBytes = write(mealToDeliverPipe[WRITE_END_PIPE], mealsToDeliver, sizeof(struct MealToDeliver));
                 if (writeBytes == -1) {
-                    errExit("write");
+                    errExit("write to meal to deliver pipe");
                 }
                 // Send the meals to the delivery person.
                 currentMealCountForDelivery = 0;
                 // After sending the meal reinitialize the mealsToDeliver
                 mealsToDeliver = (struct MealToDeliver*) malloc(sizeof(struct MealToDeliver));
                 mealsToDeliver->mealCount = 0;
+                pthread_mutex_lock(&deliveryCountMutex);
+                deliveryCount++;
+                pthread_mutex_unlock(&deliveryCountMutex);
             }
         }
+
+        pthread_mutex_lock(&deliveryCountMutex);
+        while (deliveryCount != 0) {
+            pthread_cond_wait(&deliveryCompletedCond, &deliveryCountMutex);
+        }
+        pthread_mutex_unlock(&deliveryCountMutex);
         completedMeals = 0;
         logAndPrintMessage("done serving client PID: %d\n", order.clientPid);
+        messagePacket.isFinished = 1;
+        sendMessagePacket(order.clientSocketFd, &messagePacket, socketMutex);
 
         close(order.clientSocketFd);
         free(meals);
@@ -156,8 +183,8 @@ void* manager(void* arg) {
     joinThreadPool(cookThreads, cookThreadPoolSize);
     joinThreadPool(deliveryPersonThreads, deliveryThreadPoolSize);
 
-    destroyQueue(&cookQueueWaitingToPlaceMeal);
-    destroyQueue(&cookQueueWaitingToRemoveMeal);
+    free(cookArgs);
+    free(deliveryPersonArgs);
 
     close(mealOrderPipe[READ_END_PIPE]);
     close(mealOrderPipe[WRITE_END_PIPE]);

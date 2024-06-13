@@ -118,14 +118,35 @@ long calculatePseudoInverseMatrix() {
     return nanoseconds;
 }
 
-void createThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), void* arg) {
+void createThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), void* args) {
     for (int i = 0; i < threadPoolSize; i++) {
-        if (pthread_create(&threads[i], NULL, threadFunction, arg) != 0) {
+        if (pthread_create(&threads[i], NULL, threadFunction, &args[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
         }
     }
 }
+
+void createCookThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), struct CookArguments* cookArgsArray) {
+    for (int i = 0; i < threadPoolSize; i++) {
+        cookArgsArray[i].cookNum = i; // Assign thread number
+        if (pthread_create(&threads[i], NULL, threadFunction, &cookArgsArray[i]) != 0) {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void createDeliveryThreadPool(pthread_t* threads, int threadPoolSize, void* (*threadFunction)(void*), struct DeliveryPersonArguments* deliveryArgsArray) {
+    for (int i = 0; i < threadPoolSize; i++) {
+        deliveryArgsArray[i].deliveryPersonNum = i; // Assign thread number
+        if (pthread_create(&threads[i], NULL, threadFunction, &deliveryArgsArray[i]) != 0) {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 
 void joinThreadPool(pthread_t* threads, int threadPoolSize) {
     for (int i = 0; i < threadPoolSize; i++) {
@@ -208,13 +229,13 @@ void placeMealInOven(struct Oven *oven, struct Meal meal) {
     pthread_mutex_unlock(&oven->mutex);
 }
 
-void removeMealFromOven(struct Oven *oven, pthread_t cookThread, struct Meal *meal) {
+void removeMealFromOven(struct Oven *oven, int cookNumDealWith, struct Meal *meal) {
     pthread_mutex_lock(&oven->mutex);
 
     // Find the meal associated with the requesting cook
     int index = -1;
     for (int i = 0; i < OVEN_CAPACITY; i++) {
-        if (oven->occupiedSpots[i] == 1 && pthread_equal(oven->meals[i].cookDealWith, cookThread)) {
+        if (oven->occupiedSpots[i] == 1 && oven->meals[i].cookNumDealWith == cookNumDealWith) {
             index = i;
             break;
         }

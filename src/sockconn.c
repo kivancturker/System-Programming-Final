@@ -1,6 +1,7 @@
 #include "sockconn.h"
 
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -65,4 +66,39 @@ int connectToServer(const char *hostname, int portnum) {
     }
 
     return socketFd;
+}
+
+int sendMessagePacket(int socketFd, const struct MessagePacket *packet, pthread_mutex_t *socketMutex) {
+    pthread_mutex_lock(socketMutex);
+    ssize_t bytesSent = 0;
+    ssize_t totalSize = sizeof(*packet);
+
+    while (bytesSent < totalSize) {
+        ssize_t result = send(socketFd, (const char*)packet + bytesSent, totalSize - bytesSent, 0);
+        if (result == -1) {
+            perror("send");
+            pthread_mutex_unlock(socketMutex);
+            return -1;
+        }
+        bytesSent += result;
+    }
+
+    pthread_mutex_unlock(socketMutex);
+    return 0;
+}
+
+int receiveMessagePacket(int socketFd, struct MessagePacket *packet) {
+    ssize_t bytesRead = 0;
+    ssize_t totalSize = sizeof(*packet);
+
+    while (bytesRead < totalSize) {
+        ssize_t result = recv(socketFd, (char*)packet + bytesRead, totalSize - bytesRead, 0);
+        if (result == -1) {
+            perror("recv");
+            return -1;
+        }
+        bytesRead += result;
+    }
+
+    return 0;
 }

@@ -1,9 +1,12 @@
 #include "cook.h"
 #include "myutil.h"
+#include "sockconn.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <string.h>
 
 void* cook(void* arg) {
     struct CookArguments* args = (struct CookArguments*) arg;
@@ -13,6 +16,8 @@ void* cook(void* arg) {
     pthread_cond_t* managerWorkCond = args->managerWorkCond;
     pthread_cond_t* cookWorkCond = args->cookWorkCond;
     struct Oven *oven = args->oven;
+    int cookNum = args->cookNum;
+    pthread_mutex_t *socketMutex = args->socketMutex;
 
     // In a loop read from the pipe and print the result after that close the client socket
     struct Meal meal;
@@ -20,14 +25,21 @@ void* cook(void* arg) {
     int writeBytes = 0;
     long timeTaken = 0;
     struct timespec ts;
+    int clientSocketFd = -1;
+    struct MessagePacket packet = {0};
     while (1) {
         NO_EINTR(readBytes = read(mealOrderPipe[READ_END_PIPE], &meal, sizeof(struct Meal)));
         if (readBytes == -1) {
-            errExit("read");
+            errExit("read from mealOrderPipe");
         }
+        clientSocketFd = meal.clientSocketFd;
+        snprintf(packet.message, MAX_MESSAGE_SIZE, "Cook %d STARTED preparing meal for customer %d\n", cookNum, meal.customerNo);
+        sendMessagePacket(clientSocketFd, &packet, socketMutex);
+        logMessage(packet.message);
 
+        // Meal preparation step
         meal.timeTaken = calculatePseudoInverseMatrix();
-        meal.cookDealWith = pthread_self();
+        meal.cookNumDealWith = cookNum;
 
         // Place it in the oven
         placeMealInOven(oven, meal);
@@ -39,11 +51,14 @@ void* cook(void* arg) {
         nanosleep(&ts, NULL);
 
         // Take it out of the oven
-        removeMealFromOven(oven, pthread_self(), &meal);
+        removeMealFromOven(oven, cookNum, &meal);
+        snprintf(packet.message, MAX_MESSAGE_SIZE, "Cook %d FINISHED preparing meal for customer %d\n", cookNum, meal.customerNo);
+        sendMessagePacket(clientSocketFd, &packet, socketMutex);
+        logMessage(packet.message);
         
         NO_EINTR(writeBytes = write(mealCompletePipe[WRITE_END_PIPE], &meal, sizeof(struct Meal)));
         if (writeBytes == -1) {
-            errExit("write");
+            errExit("write to mealCompletePipe");
         }
     }
 
