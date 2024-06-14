@@ -7,6 +7,7 @@
 #include <math.h>
 #include <time.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "myutil.h"
 
@@ -50,15 +51,16 @@ int validateServerArguments(const struct ServerArguments *args) {
 }
 
 int parseClientArguments(int argc, char *argv[], struct ClientArguments *args) {
-    if (argc != 5) {
-        fprintf(stderr, "Usage: %s <portnumber> <numberOfClients> <townWidth> <townHeight>\n", argv[0]);
+    if (argc != 6) {
+        fprintf(stderr, "Usage: %s <ipAddress> <portnumber> <numberOfClients> <townWidth> <townHeight>\n", argv[0]);
         return 0;
     }
 
-    args->portnumber = atoi(argv[1]);
-    args->numberOfClients = atoi(argv[2]);
-    args->width = atoi(argv[3]);
-    args->height = atoi(argv[4]);
+    strncpy(args->ipAddress, argv[1], sizeof(args->ipAddress) - 1);
+    args->portnumber = atoi(argv[2]);
+    args->numberOfClients = atoi(argv[3]);
+    args->width = atoi(argv[4]);
+    args->height = atoi(argv[5]);
 
     return validateClientArguments(args);
 }

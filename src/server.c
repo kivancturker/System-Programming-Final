@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
     }
 
     int clientFd = 0;
-    struct OrderRequest orderRequest;
-    struct Order order;
+    struct OrderRequest orderRequest = {0};
+    struct Order order = {0};
     int readBytes = 0;
     int writtenBytes = 0;
     int connectedClientCount = 0;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
         connectedClientCount++;
         // Read the message from client
         do {
-            NO_EINTR(readBytes = read(clientFd, &orderRequest, sizeof(struct OrderRequest)));
+            NO_EINTR(readBytes = recv(clientFd, &orderRequest, sizeof(struct OrderRequest), 0));
             if (readBytes == -1) {
                 errExit("read socket in server");
             }

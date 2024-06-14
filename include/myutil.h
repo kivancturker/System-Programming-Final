@@ -60,6 +60,7 @@ struct ServerArguments {
 };
 
 struct ClientArguments {
+    char ipAddress[100];
     int portnumber;
     int numberOfClients;
     int width;

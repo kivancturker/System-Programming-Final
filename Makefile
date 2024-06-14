@@ -48,7 +48,7 @@ run_server: $(SERVER_EXE)
 
 # Run client
 run_client: $(CLIENT_EXE)
-	./$(CLIENT_EXE) 5398 50 10 20
+	./$(CLIENT_EXE) localhost 5398 50 10 20
 
 # Run both server and client
 run: run_server run_client

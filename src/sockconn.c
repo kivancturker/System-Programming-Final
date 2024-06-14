@@ -68,6 +68,21 @@ int connectToServer(const char *hostname, int portnum) {
     return socketFd;
 }
 
+int hostnameResolves(const char* hostname) {
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC; // Allow IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM; // Datagram socket
+
+    int status = getaddrinfo(hostname, NULL, &hints, &res);
+    if (status != 0) {
+        return 0; // Failed to resolve
+    }
+
+    freeaddrinfo(res);
+    return 1; // Successfully resolved
+}
+
 int sendMessagePacket(int socketFd, const struct MessagePacket *packet, pthread_mutex_t *socketMutex) {
     pthread_mutex_lock(socketMutex);
     ssize_t bytesSent = 0;
