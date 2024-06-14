@@ -46,7 +46,7 @@ void* deliveryPerson(void* arg) {
         logMessage(packet.message);
 
         long timeTakenInMilliseconds = calculateDeliveryTime(*mealToDeliver, mealToDeliver->width, mealToDeliver->height, deliverySpeed);
-        timeTakenInMilliseconds /= 10; // Speed up the delivery process by 10 times
+        
         // Convert milliseconds to timespec
         struct timespec req;
         req.tv_sec = timeTakenInMilliseconds / 1000; // Convert to seconds
